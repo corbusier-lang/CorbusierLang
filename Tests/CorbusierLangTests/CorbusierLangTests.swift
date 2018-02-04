@@ -5,13 +5,13 @@ import CoreCorbusier
 class CorbusierLangTests: XCTestCase {
     
     func testLexing() throws {
-        let lexer = Lexer(input: "unplacedRect.topLeft < 5 > firstRect.bottom", component: .full)
+        let lexer = Lexer(input: "unplacedRect.top.left < 5 > firstRect.bottom", component: .full)
         let output = lexer.lex()
         print(output)
 //        let expression = try parseExpression(lineTokens: output)
 //        print(expression)
         var context = CRBContext()
-        try corbusierRun(line: "unplacedRect.topLeft < 5 > firstRect.bottom", in: &context)
+        try corbusierRun(line: "unplacedRect.top.left < 5 > firstRect.bottom", in: &context)
     }
     
     func testRunCorbusier() throws {
@@ -27,10 +27,12 @@ class CorbusierLangTests: XCTestCase {
 //        try corbusierRun(line: "place unplaced.bottomLeft < 10 > first.top", in: context)
 //        try corbusierRun(line: "place third.bottomLeft < 10 > unplaced.top", in: context)
         
-        try context.run(line: "bottomSpacing = secondRect.bottomLeft < 10 > firstRect.top")
-        try context.run(line: "placed = secondRect")
+        print(try! first.placed().anchor(at: [crbname("bottom"), crbname("left")]))
+        
+        try context.run(line: "bottomSpacing = secondRect.top.left < 10 > firstRect.bottom.left")
         try context.run(line: "place bottomSpacing")
-        try context.run(line: "place thirdRect.bottomLeft < 10 > placed.top")
+        try context.run(line: "placed = secondRect")
+        try context.run(line: "place thirdRect.top.left < 10 > placed.top.left")
         
         print(try (unplaced.placed() as! Rect).rect)
         print(try (alsoUnplaced.placed() as! Rect).rect)

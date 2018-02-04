@@ -93,11 +93,12 @@ func parseObjectAnchor(_ identifier: String) throws -> CRBPlaceExpression.Object
     if count < 2 {
         throw IdentifierMismatchError.noAnchorName(identifier)
     }
-    if count > 2 {
-        throw IdentifierMismatchError.tryingToAccessAncherOfAnAnchor(identifier)
-    }
+    let slice = comp[1...]
+        .lazy
+        .map(String.init)
+        .map(CRBAnchorName.init)
     return CRBPlaceExpression.ObjectAnchor(objectName: crbname(String(comp[0])),
-                                           anchorName: crbname(String(comp[1])))
+                                           anchorKeyPath: Array(slice))
 }
 
 enum ParsingError : Error {
