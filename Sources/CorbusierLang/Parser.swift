@@ -12,6 +12,13 @@ enum Mismatch : Error {
     case syntaxError(expected: Token, got: Token)
 }
 
+func lookup(in line: inout [Token], next: (Token) -> Bool) throws {
+    let first = line[0]
+    if next(first) {
+        try eat(first, in: &line)
+    }
+}
+
 func eat(_ token: Token, in line: inout [Token]) throws {
     guard !line.isEmpty else {
         throw EoF()
@@ -24,12 +31,37 @@ func eat(_ token: Token, in line: inout [Token]) throws {
     }
 }
 
-func parse(lineTokens: [Token]) throws -> CRBExpression {
-    guard lineTokens.count == 6 else {
+func parseStatement(lineTokens: [Token]) throws -> CRBStatement {
+    var lineTokens = lineTokens
+    let firstToken = lineTokens[0]
+    if firstToken == .place {
+        try eat(.place, in: &lineTokens)
+        let expr = try parseExpression(lineTokens: lineTokens)
+        return CRBStatement.place(expr)
+    } else if case .identifier(let toAssign) = firstToken {
+        try eat(.identifier(toAssign), in: &lineTokens)
+        try eat(.oper(.assign), in: &lineTokens)
+        let expr = try parseExpression(lineTokens: lineTokens)
+        return CRBStatement.assign(crbname(toAssign), expr)
+    } else {
+        let expr = try parseExpression(lineTokens: lineTokens)
+        return CRBStatement.unused(expr)
+    }
+}
+
+func parseExpression(lineTokens: [Token]) throws -> CRBExpression {
+    
+    if lineTokens.count == 1 {
+        if case .identifier(let instanceName) = lineTokens[0] {
+            return CRBExpression.instance(crbname(instanceName))
+        }
+    }
+    
+    guard lineTokens.count == 5 else {
         throw ParsingError.invalidExpression(lineTokens)
     }
     var lineTokens = lineTokens
-    try eat(.place, in: &lineTokens)
+
     guard case .identifier(let leftIdentifier) = lineTokens.first! else {
         throw ParsingError.notAnIdentifier(lineTokens.first!)
     }
@@ -46,7 +78,7 @@ func parse(lineTokens: [Token]) throws -> CRBExpression {
     try eat(.identifier(rightIdentifier), in: &lineTokens)
     let toPlace = try parseObjectAnchor(leftIdentifier)
     let placeFrom = try parseObjectAnchor(rightIdentifier)
-    return .place(CRBPlaceExpression(toPlace: toPlace, distance: CRBFloat(number), anchorPointToPlaceFrom: .ofObject(placeFrom)))
+    return CRBExpression.placement(CRBPlaceExpression(toPlace: toPlace, distance: CRBFloat(number), anchorPointToPlaceFrom: .ofObject(placeFrom)))
 }
 
 func parseObjectAnchor(_ identifier: String) throws -> CRBPlaceExpression.ObjectAnchor {

@@ -25,6 +25,7 @@ enum Token {
     enum BinaryOperator {
         case layoutLeft
         case layoutRight
+        case assign
     }
     
     case identifier(String)
@@ -32,6 +33,8 @@ enum Token {
     case comma
     case oper(BinaryOperator)
     case place
+    case parenLeft
+    case parenRight
     
 }
 
@@ -46,6 +49,10 @@ extension Token : Equatable {
         case (.comma, .comma):
             return true
         case (.place, .place):
+            return true
+        case (.parenLeft, .parenLeft):
+            return true
+        case (.parenRight, .parenRight):
             return true
         case (.oper(let left), .oper(let right)):
             return left == right
@@ -172,6 +179,19 @@ extension StringTokenDetector {
 
 extension LexerComponent {
     
+    static var parenthesis: LexerComponent {
+        return LexerComponent.singleElement(detect: { (char) -> Token? in
+            switch char {
+            case "(":
+                return .parenLeft
+            case ")":
+                return .parenRight
+            default:
+                return nil
+            }
+        })
+    }
+    
     static var operators: LexerComponent {
         return LexerComponent.singleElement(detect: { (char) -> Token? in
             switch char {
@@ -179,6 +199,8 @@ extension LexerComponent {
                 return .oper(.layoutRight)
             case "<":
                 return .oper(.layoutLeft)
+            case "=":
+                return .oper(.assign)
             default:
                 return nil
             }
@@ -199,6 +221,7 @@ extension LexerComponent {
             .composed(withDetector: .knownKeywords)
             .composed(withDetector: .identifier)
         return LexerComponent.operators
+            .composed(withComponent: .parenthesis)
             .composed(withComponent: .comma)
             .composed(withComponent: .string(detector: stringDetectors))
     }
