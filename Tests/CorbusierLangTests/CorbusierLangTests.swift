@@ -11,7 +11,7 @@ class CorbusierLangTests: XCTestCase {
 //        let expression = try parseExpression(lineTokens: output)
 //        print(expression)
         var context = CRBContext()
-        try corbusierRun(line: "unplacedRect.top.left < 5 > firstRect.bottom", in: &context)
+        try context.run(line: "unplacedRect.top.left < 5 > firstRect.botoom")
     }
     
     func testRunCorbusier() throws {
@@ -27,7 +27,7 @@ class CorbusierLangTests: XCTestCase {
 //        try corbusierRun(line: "place unplaced.bottomLeft < 10 > first.top", in: context)
 //        try corbusierRun(line: "place third.bottomLeft < 10 > unplaced.top", in: context)
         
-        print(try! first.placed().anchor(at: [crbname("bottom"), crbname("left")]))
+        print(try! first.placed().anchor(at: [crbname("bottom"), crbname("left")])!)
         
         try context.run(line: "bottomSpacing = secondRect.top.left < 10 > firstRect.bottom.left")
         try context.run(line: "place bottomSpacing")
@@ -38,12 +38,4 @@ class CorbusierLangTests: XCTestCase {
         print(try (alsoUnplaced.placed() as! Rect).rect)
     }
 
-}
-
-extension CRBContext {
-    
-    fileprivate mutating func run(line: String) throws {
-        try corbusierRun(line: line, in: &self)
-    }
-    
 }
