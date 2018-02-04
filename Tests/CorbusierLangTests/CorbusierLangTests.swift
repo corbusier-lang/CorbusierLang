@@ -8,8 +8,10 @@ class CorbusierLangTests: XCTestCase {
         let lexer = Lexer(input: "unplacedRect.topLeft < 5 > firstRect.bottom", component: .full)
         let output = lexer.lex()
         print(output)
-        let expression = try parseExpression(lineTokens: output)
-        print(expression)
+//        let expression = try parseExpression(lineTokens: output)
+//        print(expression)
+        var context = CRBContext()
+        try corbusierRun(line: "unplacedRect.topLeft < 5 > firstRect.bottom", in: &context)
     }
     
     func testRunCorbusier() throws {
@@ -39,7 +41,7 @@ class CorbusierLangTests: XCTestCase {
 extension CRBContext {
     
     fileprivate mutating func run(line: String) throws {
-        self = try corbusierRun(line: line, in: self)
+        try corbusierRun(line: line, in: &self)
     }
     
 }

@@ -39,10 +39,16 @@ func parseStatement(lineTokens: [Token]) throws -> CRBStatement {
         let expr = try parseExpression(lineTokens: lineTokens)
         return CRBStatement.place(expr)
     } else if case .identifier(let toAssign) = firstToken {
-        try eat(.identifier(toAssign), in: &lineTokens)
-        try eat(.oper(.assign), in: &lineTokens)
-        let expr = try parseExpression(lineTokens: lineTokens)
-        return CRBStatement.assign(crbname(toAssign), expr)
+        let currentLine = lineTokens
+        do {
+            try eat(.identifier(toAssign), in: &lineTokens)
+            try eat(.oper(.assign), in: &lineTokens)
+            let expr = try parseExpression(lineTokens: lineTokens)
+            return CRBStatement.assign(crbname(toAssign), expr)
+        } catch {
+            let expr = try parseExpression(lineTokens: currentLine)
+            return CRBStatement.unused(expr)
+        }
     } else {
         let expr = try parseExpression(lineTokens: lineTokens)
         return CRBStatement.unused(expr)
