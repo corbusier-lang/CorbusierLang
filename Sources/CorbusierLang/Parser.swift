@@ -12,11 +12,8 @@ enum Mismatch : Error {
     case syntaxError(expected: Token, got: Token)
 }
 
-func lookup(in line: inout [Token], next: (Token) -> Bool) throws {
-    let first = line[0]
-    if next(first) {
-        try eat(first, in: &line)
-    }
+func peek(in line: [Token]) -> Token {
+    return line[0]
 }
 
 func eat(_ token: Token, in line: inout [Token]) throws {
@@ -53,39 +50,95 @@ func parseStatement(lineTokens: [Token]) throws -> CRBStatement {
     }
 }
 
-func parseExpression(lineTokens: inout [Token]) throws -> CRBExpression {
-    
-    if lineTokens.count == 1 {
-        if case .identifier(let instanceName) = lineTokens[0] {
-            let parsedInstanceName = try parseInstanceCall(instanceName)
-            return CRBExpression.subinstance(crbname(parsedInstanceName.name),
-                                             parsedInstanceName.keyPath.map(crbname))
+func parseFunctionCallExpression(lineTokens: inout [Token]) throws -> CRBExpression {
+    let ref = try parseReferenceExpression(lineTokens: &lineTokens)
+    try eat(.parenLeft, in: &lineTokens)
+    let args = try parseArgs(lineTokens: &lineTokens)
+    try eat(.parenRight, in: &lineTokens)
+    return .call(ref, arguments: args)
+}
+
+func parseArgs(lineTokens: inout [Token]) throws -> [CRBExpression] {
+    if peek(in: lineTokens) == .parenRight {
+        return []
+    } else {
+        let expr = try parseExpression(lineTokens: &lineTokens)
+        if peek(in: lineTokens) == .parenRight {
+            return [expr]
+        } else {
+            try eat(.comma, in: &lineTokens)
+            return try [expr] + parseArgs(lineTokens: &lineTokens)
         }
     }
-    
-    guard lineTokens.count == 5 else {
-        throw ParsingError.invalidExpression(lineTokens)
-    }
+}
 
-    guard case .identifier(let leftIdentifier) = lineTokens.first! else {
-        throw ParsingError.notAnIdentifier(lineTokens.first!)
+func parseExpression(lineTokens: inout [Token]) throws -> CRBExpression {
+    return try expressionParser(&lineTokens)
+}
+
+let expressionParser = parsePlacementExpression
+    ~> parseInstanceExpression
+    ~> parseFunctionCallExpression
+    ~> parseReferenceExpression
+
+typealias Parse = (inout [Token]) throws -> CRBExpression
+
+precedencegroup ParseForward {
+    associativity: left
+}
+
+infix operator ~> : ParseForward
+
+func ~> (lhs: @escaping Parse, rhs: @escaping Parse) -> Parse {
+    return { (tokens: inout [Token]) throws -> CRBExpression in
+        var copy = tokens
+        do {
+            let res = try lhs(&tokens)
+            return res
+        } catch {
+            let secondRes = try rhs(&copy)
+            tokens = copy
+            return secondRes
+        }
     }
-    try eat(.identifier(leftIdentifier), in: &lineTokens)
+}
+
+func parseInstanceExpression(lineTokens: inout [Token]) throws -> CRBExpression {
+    guard case .number(let num) = peek(in: lineTokens) else {
+        throw "Not a number"
+    }
+    try eat(.number(num), in: &lineTokens)
+    let instance = CRBNumberInstance(CRBFloat(num))
+    return CRBExpression.instance(instance)
+}
+
+func parseReferenceExpression(lineTokens: inout [Token]) throws -> CRBExpression {
+    guard case .identifier(let identifier) = peek(in: lineTokens) else {
+        throw "Not an identifier"
+    }
+    try eat(.identifier(identifier), in: &lineTokens)
+    let instanceCall = try parseInstanceCall(identifier)
+    return CRBExpression.reference(crbname(instanceCall.name),
+                                   instanceCall.keyPath.map(crbname))
+}
+
+func parsePlacementExpression(lineTokens: inout [Token]) throws -> CRBExpression {
+//    try eat(.object, in: &lineTokens)
+    guard case .identifier(let objectIdentifier) = peek(in: lineTokens) else {
+        throw "Not an identifier"
+    }
+    try eat(.identifier(objectIdentifier), in: &lineTokens)
+    let instanceInfo = try parseInstanceCall(objectIdentifier)
+    let objectAnchor = CRBPlaceExpression.ObjectAnchor(objectName: crbname(instanceInfo.name),
+                                                       anchorKeyPath: instanceInfo.keyPath.map(crbname))
     try eat(.oper(.layoutLeft), in: &lineTokens)
-    guard case .number(let number) = lineTokens.first! else {
-        throw ParsingError.expectedNumber(lineTokens.first!)
-    }
-    try eat(.number(number), in: &lineTokens)
+    let distance = try parseExpression(lineTokens: &lineTokens)
     try eat(.oper(.layoutRight), in: &lineTokens)
-    guard case .identifier(let rightIdentifier) = lineTokens.first! else {
-        throw ParsingError.notAnIdentifier(lineTokens.first!)
-    }
-    try eat(.identifier(rightIdentifier), in: &lineTokens)
-    let toPlaceParsed = try parseInstanceCall(leftIdentifier)
-    let toPlace = CRBPlaceExpression.ObjectAnchor.init(objectName: crbname(toPlaceParsed.name), anchorKeyPath: toPlaceParsed.keyPath.map(crbname))
-    let placeFromParsed = try parseInstanceCall(rightIdentifier)
-    let placeFrom = CRBPlaceExpression.AnchorPointRef.init(instanceName: crbname(placeFromParsed.name), keyPath: placeFromParsed.keyPath.map(crbname))
-    return CRBExpression.placement(CRBPlaceExpression(toPlace: toPlace, distance: CRBFloat(number), anchorPointToPlaceFrom: placeFrom))
+    let fromAnchor = try parseExpression(lineTokens: &lineTokens)
+    let place = CRBPlaceExpression(toPlace: objectAnchor,
+                                   distance: distance,
+                                   anchorPointToPlaceFrom: fromAnchor)
+    return .placement(place)
 }
 
 func parseInstanceCall(_ identifier: String) throws -> (name: String, keyPath: [String]) {
@@ -111,3 +164,5 @@ enum IdentifierMismatchError : Error {
     case notAnIdentifier(String)
     case tryingToAccessAncherOfAnAnchor(String)
 }
+
+extension String : Error { }

@@ -36,6 +36,7 @@ enum Token {
     case parenLeft
     case parenRight
     case `let`
+    case object
     
 }
 
@@ -52,6 +53,8 @@ extension Token : Equatable {
         case (.place, .place):
             return true
         case (.`let`, .`let`):
+            return true
+        case (.object, .object):
             return true
         case (.parenLeft, .parenLeft):
             return true
@@ -206,6 +209,8 @@ extension LexerComponent {
                 return .oper(.layoutLeft)
             case "=":
                 return .oper(.assign)
+            case "*":
+                return .object
             default:
                 return nil
             }
