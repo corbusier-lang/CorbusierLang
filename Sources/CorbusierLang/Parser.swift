@@ -36,37 +36,36 @@ func parseStatement(lineTokens: [Token]) throws -> CRBStatement {
     let firstToken = lineTokens[0]
     if firstToken == .place {
         try eat(.place, in: &lineTokens)
-        let expr = try parseExpression(lineTokens: lineTokens)
+        let expr = try parseExpression(lineTokens: &lineTokens)
         return CRBStatement.place(expr)
-    } else if case .identifier(let toAssign) = firstToken {
-        let currentLine = lineTokens
-        do {
-            try eat(.identifier(toAssign), in: &lineTokens)
-            try eat(.oper(.assign), in: &lineTokens)
-            let expr = try parseExpression(lineTokens: lineTokens)
-            return CRBStatement.assign(crbname(toAssign), expr)
-        } catch {
-            let expr = try parseExpression(lineTokens: currentLine)
-            return CRBStatement.unused(expr)
+    } else if firstToken == .`let` {
+        try eat(.`let`, in: &lineTokens)
+        guard case .identifier(let toAssign) = lineTokens.first! else {
+            throw ParsingError.notAnIdentifier(lineTokens.first!)
         }
+        try eat(.identifier(toAssign), in: &lineTokens)
+        try eat(.oper(.assign), in: &lineTokens)
+        let expression = try parseExpression(lineTokens: &lineTokens)
+        return CRBStatement.assign(crbname(toAssign), expression)
     } else {
-        let expr = try parseExpression(lineTokens: lineTokens)
+        let expr = try parseExpression(lineTokens: &lineTokens)
         return CRBStatement.unused(expr)
     }
 }
 
-func parseExpression(lineTokens: [Token]) throws -> CRBExpression {
+func parseExpression(lineTokens: inout [Token]) throws -> CRBExpression {
     
     if lineTokens.count == 1 {
         if case .identifier(let instanceName) = lineTokens[0] {
-            return CRBExpression.instance(crbname(instanceName))
+            let parsedInstanceName = try parseInstanceCall(instanceName)
+            return CRBExpression.subinstance(crbname(parsedInstanceName.name),
+                                             parsedInstanceName.keyPath.map(crbname))
         }
     }
     
     guard lineTokens.count == 5 else {
         throw ParsingError.invalidExpression(lineTokens)
     }
-    var lineTokens = lineTokens
 
     guard case .identifier(let leftIdentifier) = lineTokens.first! else {
         throw ParsingError.notAnIdentifier(lineTokens.first!)
@@ -82,23 +81,23 @@ func parseExpression(lineTokens: [Token]) throws -> CRBExpression {
         throw ParsingError.notAnIdentifier(lineTokens.first!)
     }
     try eat(.identifier(rightIdentifier), in: &lineTokens)
-    let toPlace = try parseObjectAnchor(leftIdentifier)
-    let placeFrom = try parseObjectAnchor(rightIdentifier)
-    return CRBExpression.placement(CRBPlaceExpression(toPlace: toPlace, distance: CRBFloat(number), anchorPointToPlaceFrom: .ofObject(placeFrom)))
+    let toPlaceParsed = try parseInstanceCall(leftIdentifier)
+    let toPlace = CRBPlaceExpression.ObjectAnchor.init(objectName: crbname(toPlaceParsed.name), anchorKeyPath: toPlaceParsed.keyPath.map(crbname))
+    let placeFromParsed = try parseInstanceCall(rightIdentifier)
+    let placeFrom = CRBPlaceExpression.AnchorPointRef.init(instanceName: crbname(placeFromParsed.name), keyPath: placeFromParsed.keyPath.map(crbname))
+    return CRBExpression.placement(CRBPlaceExpression(toPlace: toPlace, distance: CRBFloat(number), anchorPointToPlaceFrom: placeFrom))
 }
 
-func parseObjectAnchor(_ identifier: String) throws -> CRBPlaceExpression.ObjectAnchor {
+func parseInstanceCall(_ identifier: String) throws -> (name: String, keyPath: [String]) {
     let comp = identifier.split(separator: ".")
     let count = comp.count
-    if count < 2 {
-        throw IdentifierMismatchError.noAnchorName(identifier)
+    if count < 1 {
+        throw IdentifierMismatchError.notAnIdentifier(identifier)
     }
     let slice = comp[1...]
         .lazy
         .map(String.init)
-        .map(CRBAnchorName.init)
-    return CRBPlaceExpression.ObjectAnchor(objectName: crbname(String(comp[0])),
-                                           anchorKeyPath: Array(slice))
+    return (name: String(comp[0]), keyPath: Array(slice))
 }
 
 enum ParsingError : Error {
@@ -109,6 +108,6 @@ enum ParsingError : Error {
 }
 
 enum IdentifierMismatchError : Error {
-    case noAnchorName(String)
+    case notAnIdentifier(String)
     case tryingToAccessAncherOfAnAnchor(String)
 }

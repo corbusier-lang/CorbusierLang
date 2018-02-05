@@ -35,6 +35,7 @@ enum Token {
     case place
     case parenLeft
     case parenRight
+    case `let`
     
 }
 
@@ -49,6 +50,8 @@ extension Token : Equatable {
         case (.comma, .comma):
             return true
         case (.place, .place):
+            return true
+        case (.`let`, .`let`):
             return true
         case (.parenLeft, .parenLeft):
             return true
@@ -165,6 +168,8 @@ extension StringTokenDetector {
             switch str {
             case "place":
                 return .place
+            case "let":
+                return .`let`
             default:
                 return nil
             }

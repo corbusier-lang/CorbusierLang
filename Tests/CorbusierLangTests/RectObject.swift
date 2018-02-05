@@ -1,6 +1,13 @@
 //
-//  RectObject.swift
-//  CorbusierLangTests
+//  CGArea.swift
+//  CoreCorbusier
+//
+//  Created by Олег on 05.02.2018.
+//
+
+//
+//  CGArea.swift
+//  CorbusierKit
 //
 //  Created by Олег on 04.02.2018.
 //
@@ -40,7 +47,7 @@ struct CGSizeSide : CRBAnchorEnvironment {
     
 }
 
-class RectObject : CRBObject {
+class CGArea : CRBObject {
     
     fileprivate enum Anchors : String {
         case top
@@ -67,14 +74,24 @@ class RectObject : CRBObject {
     
     func place(at point: CRBPoint, fromAnchorWith keyPath: CRBAnchorKeyPath) {
         let cgrect: CGRect
-        let path = keyPath.map({ $0.rawValue })
+        let path = keyPath.map({ $0.rawValue }).joined(separator: ".")
         switch path {
-        case ["top", "left"], ["left", "top"]:
+        case "top.left", "left.top":
             cgrect = CGRect(origin: CGPoint.init(x: point.x, y: point.y - size.height), size: size)
-        case ["top", "center"], ["top"]:
-            cgrect = CGRect(origin: CGPoint.init(x: point.x + size.width / 2, y: point.y - size.height), size: size)
-        case ["top", "right"], ["right", "top"]:
-            cgrect = CGRect(origin: CGPoint.init(x: point.x + size.width, y: point.y - size.height), size: size)
+        case "top.center", "top":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x - size.width / 2, y: point.y - size.height), size: size)
+        case "top.right", "right.top":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x - size.width, y: point.y - size.height), size: size)
+        case "bottom.left", "left.bottom":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x, y: point.y), size: size)
+        case "bottom.center", "bottom":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x + size.width / 2, y: point.y), size: size)
+        case "bottom.right", "right.bottom":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x + size.width, y: point.y), size: size)
+        case "left":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x, y: point.y - size.height / 2), size: size)
+        case "right":
+            cgrect = CGRect(origin: CGPoint.init(x: point.x - size.width, y: point.y - size.height / 2), size: size)
         default:
             cgrect = .zero
         }
@@ -127,3 +144,5 @@ class Rect : CRBAnchorEnvironment {
     }
     
 }
+
+
