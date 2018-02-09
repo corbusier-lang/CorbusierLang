@@ -18,7 +18,7 @@ class CorbusierLangTests: XCTestCase {
         let unplaced = CGArea(size: CGSize.init(width: 50, height: 50))
         let alsoUnplaced = CGArea(size: CGSize(width: 50, height: 50))
         var context = CRBContext()
-        context.instances = [
+        context.currentScope.instances = [
             crbname("firstRect") : first,
             crbname("secondRect") : unplaced,
             crbname("thirdRect") : alsoUnplaced,
