@@ -5,8 +5,7 @@ import CoreCorbusier
 class CorbusierLangTests: XCTestCase {
     
     func testLexing() throws {
-        let lexer = Lexer(input: "unplacedRect.top.left < 5 > firstRect.bottom", component: .full)
-        let output = lexer.lex()
+        let output = lex(code: "unplacedRect.top.left < 5 > firstRect.bottom")
         print(output)
 //        let expression = try parseExpression(lineTokens: output)
 //        print(expression)

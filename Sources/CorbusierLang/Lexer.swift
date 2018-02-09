@@ -36,7 +36,15 @@ enum Token {
     case parenLeft
     case parenRight
     case `let`
+    case `if`
+    case `else`
+    case def
     case object
+    case semicolon
+    case braceLeft
+    case braceRight
+    case endOfLine
+    case `return`
     
 }
 
@@ -54,11 +62,27 @@ extension Token : Equatable {
             return true
         case (.`let`, .`let`):
             return true
+        case (.`return`, .`return`):
+            return true
+        case (.`if`, .`if`):
+            return true
+        case (.`else`, .`else`):
+            return true
+        case (.def, .def):
+            return true
         case (.object, .object):
             return true
         case (.parenLeft, .parenLeft):
             return true
         case (.parenRight, .parenRight):
+            return true
+        case (.semicolon, .semicolon):
+            return true
+        case (.braceLeft, .braceLeft):
+            return true
+        case (.braceRight, .braceRight):
+            return true
+        case (.endOfLine, .endOfLine):
             return true
         case (.oper(let left), .oper(let right)):
             return left == right
@@ -173,6 +197,14 @@ extension StringTokenDetector {
                 return .place
             case "let":
                 return .`let`
+            case "def":
+                return .def
+            case "return":
+                return .`return`
+            case "if":
+                return .`if`
+            case "else":
+                return .`else`
             default:
                 return nil
             }
@@ -187,13 +219,17 @@ extension StringTokenDetector {
 
 extension LexerComponent {
     
-    static var parenthesis: LexerComponent {
+    static var parenthesisAndBraces: LexerComponent {
         return LexerComponent.singleElement(detect: { (char) -> Token? in
             switch char {
             case "(":
                 return .parenLeft
             case ")":
                 return .parenRight
+            case "{":
+                return .braceLeft
+            case "}":
+                return .braceRight
             default:
                 return nil
             }
@@ -211,6 +247,8 @@ extension LexerComponent {
                 return .oper(.assign)
             case "*":
                 return .object
+            case ";":
+                return .semicolon
             default:
                 return nil
             }
@@ -231,14 +269,22 @@ extension LexerComponent {
             .composed(withDetector: .knownKeywords)
             .composed(withDetector: .identifier)
         return LexerComponent.operators
-            .composed(withComponent: .parenthesis)
+            .composed(withComponent: .parenthesisAndBraces)
             .composed(withComponent: .comma)
             .composed(withComponent: .string(detector: stringDetectors))
     }
     
 }
 
-class Lexer {
+func lex(code: String) -> [Token] {
+    let tokenGroups = code.components(separatedBy: .newlines).map { (str) -> [Token] in
+        let lexer = Lexer(input: str, component: .full)
+        return lexer.lex()
+    }
+    return Array(tokenGroups.joined(separator: [.endOfLine]))
+}
+
+fileprivate class Lexer {
     
     let input: String
     var index: String.Index
