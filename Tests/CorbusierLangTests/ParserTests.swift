@@ -82,4 +82,10 @@ if equals(a, b) { let main = 10 }
         
     }
     
+    func testParseNumber() throws {
+        let token = lex(code: "10.54 100.12").first!
+        print(token)
+        XCTAssertEqual(token, .number(10.54))
+    }
+    
 }

@@ -13,6 +13,36 @@ class CorbusierLangTests: XCTestCase {
 //        try context.run(line: "*unplacedRect.top.left < 5 > firstRect.botoom")
     }
     
+    func testCallFuncWithComplexArguments() throws {
+        
+        let corbusier = Corbusier(multiline: """
+let a = add(add(5, 10), add(10, add(15, 20)))
+return a
+""", context: .init())
+        try corbusier.run()
+        dump(corbusier.context.returningValue)
+        
+    }
+    
+    func testRecursion() throws {
+        
+        let corbusier = Corbusier(multiline: """
+def recursive(a) {
+    if greater(a, 10) {
+        let less = add(a, negate(1))
+        return recursive(less)
+    } else {
+        return a
+    }
+}
+return recursive(25.5)
+""", context: CRBContext())
+        try corbusier.run()
+        let returned = corbusier.context.returningValue as! CRBNumberInstance
+        XCTAssertEqual(returned.value, 9.5)
+        
+    }
+    
     func testRunCorbusier() throws {
         let first = CGArea(rect: CGRect.init(x: 0, y: 0, width: 40, height: 40))
         let unplaced = CGArea(size: CGSize.init(width: 50, height: 50))
@@ -22,7 +52,6 @@ class CorbusierLangTests: XCTestCase {
             crbname("firstRect") : first,
             crbname("secondRect") : unplaced,
             crbname("thirdRect") : alsoUnplaced,
-            crbname("add") : CRBFunctionInstance.add(),
             crbname("dump") : CRBExternalFunctionInstance.print(),
         ]
 //        try corbusierRun(line: "place unplaced.bottomLeft < 10 > first.top", in: context)
