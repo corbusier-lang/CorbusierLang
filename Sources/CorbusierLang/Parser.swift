@@ -72,6 +72,7 @@ func parseStatements(lineTokens: inout [Token]) -> [CRBStatement] {
         if lineTokens.isEmpty {
             break
         }
+        skipEndOfLine(in: &lineTokens)
         let copy = lineTokens
         do {
             let line = try statementParser(&lineTokens)

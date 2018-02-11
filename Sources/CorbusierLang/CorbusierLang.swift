@@ -26,30 +26,33 @@ public final class Corbusier {
 
     public var code: String
     
-    public init(multiline: String, context: CRBContext) {
-        self.code = multiline
+    public init(context: CRBContext, files: [String], includeStdlib: Bool = true) {
+        var files = files
+        if includeStdlib {
+            print("Including stdlib...")
+            files.insert(stdlib, at: 0)
+        }
+        self.code = files.joined(separator: "\n")
         self.context = context
         self.originalContext = context
     }
-
-    public convenience init(lines: [String], context: CRBContext) {
+    
+    public convenience init(context: CRBContext, code: String) {
+        self.init(context: context, files: [code])
+    }
+    
+    public convenience init(context: CRBContext, lines: [String]) {
         let code = lines.joined(separator: "\n")
-        self.init(multiline: code, context: context)
+        self.init(context: context, code: code)
     }
 
-    public convenience init(url: URL, context: CRBContext) throws {
+    public convenience init(context: CRBContext, url: URL) throws {
         let data = try Data.init(contentsOf: url)
         let string = String.init(data: data, encoding: .utf8) ?? ""
-        self.init(multiline: string, context: context)
+        self.init(context: context, code: string)
     }
     
     public func run() throws {
-//        for line in lines {
-//            let lexer = Lexer(input: line, component: .full)
-//            var tokens = lexer.lex()
-//            let statement = try parseStatement(lineTokens: &tokens)
-//            try context.execute(statement: statement)
-//        }
         var tokens = lex(code: code)
         let statements = parseStatements(lineTokens: &tokens)
         try context.execute(statement: .ordered(statements))
