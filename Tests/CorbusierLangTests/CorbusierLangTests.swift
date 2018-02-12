@@ -15,18 +15,17 @@ class CorbusierLangTests: XCTestCase {
     
     func testCallFuncWithComplexArguments() throws {
         
-        let corbusier = Corbusier(context: .init(), code: """
+        let context = try corbusier(context: .init(), code: """
 let a = add(add(5, 10), add(10, add(15, 20)))
 return a
 """)
-        try corbusier.run()
-        dump(corbusier.context.returningValue)
+        dump(context.returningValue)
         
     }
     
     func testRecursion() throws {
         
-        let corbusier = Corbusier(context: CRBContext(), code: """
+        let context = try corbusier(context: CRBContext(), code: """
 def recursive(a) {
     if greater(a, 10) {
         let less = subtract(a, 1)
@@ -39,11 +38,10 @@ def recursive(a) {
 
 return recursive(25.5)
 """)
-        try corbusier.run()
-        dump(corbusier.context)
-        let returned = corbusier.context.returningValue as! CRBNumberInstance
+        dump(context)
+        let returned = context.returningValue as! CRBNumberInstance
         XCTAssertEqual(returned.value, 9.5)
-        dump(corbusier.context)
+        dump(context)
     }
     
     func testRunCorbusier() throws {

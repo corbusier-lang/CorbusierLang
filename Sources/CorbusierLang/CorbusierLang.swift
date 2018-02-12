@@ -19,14 +19,38 @@ extension CRBContext {
     
 }
 
-public final class Corbusier {
-    
-    public let originalContext: CRBContext
-    public var context: CRBContext
+@discardableResult
+public func corbusier(context: CRBContext, files: [String], includeStdlib: Bool = true) throws -> CRBContext {
+    let runner = Corbusier(context: context, files: files, includeStdlib: includeStdlib)
+    try runner.run()
+    return runner.context
+}
 
-    public var code: String
+@discardableResult
+public func corbusier(context: CRBContext, code: String) throws -> CRBContext {
+    return try corbusier(context: context, files: [code])
+}
+
+@discardableResult
+public func corbusier(context: CRBContext, urls: [URL]) throws -> CRBContext {
+    let codeFiles = try urls
+        .map({ try String.init(contentsOf: $0) })
+    return try corbusier(context: context, files: codeFiles)
+}
+
+@discardableResult
+public func corbusier(context: CRBContext, url: URL) throws -> CRBContext {
+    return try corbusier(context: context, urls: [url])
+}
+
+fileprivate class Corbusier {
     
-    public init(context: CRBContext, files: [String], includeStdlib: Bool = true) {
+    let originalContext: CRBContext
+    var context: CRBContext
+
+    var code: String
+    
+    init(context: CRBContext, files: [String], includeStdlib: Bool = true) {
         var files = files
         if includeStdlib {
             print("Including stdlib...")
@@ -36,23 +60,8 @@ public final class Corbusier {
         self.context = context
         self.originalContext = context
     }
-    
-    public convenience init(context: CRBContext, code: String) {
-        self.init(context: context, files: [code])
-    }
-    
-    public convenience init(context: CRBContext, lines: [String]) {
-        let code = lines.joined(separator: "\n")
-        self.init(context: context, code: code)
-    }
 
-    public convenience init(context: CRBContext, url: URL) throws {
-        let data = try Data.init(contentsOf: url)
-        let string = String.init(data: data, encoding: .utf8) ?? ""
-        self.init(context: context, code: string)
-    }
-    
-    public func run() throws {
+    func run() throws {
         var tokens = lex(code: code)
         let statements = parseStatements(lineTokens: &tokens)
         try context.execute(statement: .ordered(statements))
